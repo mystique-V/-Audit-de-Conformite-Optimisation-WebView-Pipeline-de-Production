@@ -1,0 +1,644 @@
+/* =========================================================
+   TP02.5 — Interface SOC · Feuille de style
+   TSRS1 · Développement Web Adaptatif
+   ========================================================= */
+
+/* ---------- Jetons de design (variables CSS) ----------
+   Une variable se déclare dans :root (= tout le document) sous la forme --nom.
+   On la réutilise ensuite partout avec var(--nom).
+   Avantage : pour changer une couleur, on la modifie à UN seul endroit. */
+:root {
+  /* Fond dégradé demandé : bleu nuit -> noir (Étape 2.1). */
+  --bg-top:      #0f172a;   /* bleu nuit (haut du dégradé) */
+  --bg-bottom:   #020617;   /* presque noir (bas du dégradé) */
+
+  /* Surfaces & bordures des cartes. */
+  --surface:     #0f1a2f;   /* fond des cartes (haut) */
+  --surface-2:   #0b1428;   /* fond des cartes (bas) + champs */
+  --border:      #1e2d4a;   /* bordure visible */
+  --border-soft: #16233d;   /* bordure discrète (séparateurs internes) */
+
+  /* Couleurs de texte, de la plus claire à la plus discrète. */
+  --text:        #e2e8f0;   /* texte principal */
+  --text-dim:    #94a3b8;   /* texte secondaire */
+  --text-faint:  #64748b;   /* texte très discret (libellés) */
+
+  /* Couleurs d'alerte (criticité). Les "glow" sont des versions transparentes
+     (rgba) servant aux ombres/halos. */
+  --crit:        #ef4444;                 /* rouge = critique */
+  --crit-glow:   rgba(239, 68, 68, 0.30);
+  --warn:        #f59e0b;                 /* orange = warning */
+  --info:        #38bdf8;                 /* bleu = info */
+  --info-glow:   rgba(56, 189, 248, 0.22);
+  --ok:          #10b981;                 /* vert = OK / bloqué */
+
+  /* Polices : une pile de secours suit toujours la police principale,
+     au cas où Google Fonts ne charge pas. */
+  --font-ui:   'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Courier New', monospace;
+
+  --radius: 12px;   /* arrondi standard des coins */
+}
+
+/* ---------- Base ---------- */
+/* Le sélecteur universel * s'applique à TOUS les éléments.
+   box-sizing: border-box = la largeur inclut la bordure et le padding
+   (évite les surprises de calcul de taille). */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;                 /* supprime la marge par défaut du navigateur */
+  min-height: 100vh;         /* la page fait au moins toute la hauteur de l'écran */
+  font-family: var(--font-ui);
+  color: var(--text);
+
+  /* Étape 2.1 — Fond : on superpose 2 dégradés.
+     1) un halo bleu radial en haut à droite (ambiance) ;
+     2) le dégradé linéaire sombre demandé (bleu nuit -> noir). */
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(56,189,248,0.10), transparent 60%),
+    linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  background-attachment: fixed;   /* le fond ne défile pas avec le contenu */
+
+  line-height: 1.5;          /* hauteur de ligne confortable */
+
+  /* TP05 — SAFE AREAS (spec n°1) : max(24px, env(safe-area-inset-*)) prend
+     la PLUS GRANDE valeur entre notre marge habituelle et la zone
+     d'exclusion matérielle (encoche, coins arrondis, barre home).
+     Écran sans encoche : env() vaut 0 → max() rend 24px, rien ne change.
+     iPhone à encoche en paysage : l'inset latéral (~44px) l'emporte → le
+     titre du NOC ne passe jamais sous la barre de statut de l'appareil. */
+  padding: max(24px, env(safe-area-inset-top))
+           max(24px, env(safe-area-inset-right))
+           max(24px, env(safe-area-inset-bottom))
+           max(24px, env(safe-area-inset-left));
+
+  /* TP05 — WEBVIEW (spec n°1) : touch-action: manipulation conserve le
+     défilement et le pincement mais SUPPRIME le zoom au double-tap. Le
+     navigateur n'a donc plus à attendre ~300 ms pour savoir si un second
+     tap arrive : les boutons répondent instantanément, comme en natif.
+     Appliqué au body, il couvre toute la page (l'action tactile effective
+     d'un point est l'intersection de celles de ses ancêtres). */
+  touch-action: manipulation;
+
+  /* TP05 — Confort "application native" : on retire le flash gris/bleu
+     d'Android au toucher, et l'effet élastique / pull-to-refresh en haut
+     de page qui trahirait une page web encapsulée. */
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+h1, h2 { margin: 0; font-weight: 600; }   /* on neutralise les marges par défaut des titres */
+
+/* Classes utilitaires réutilisables. */
+.mono { font-family: var(--font-mono); font-feature-settings: "tnum"; } /* tnum = chiffres à largeur fixe */
+.crit { color: var(--crit); }
+
+/* =========================================================
+   HEADER — Étape 2.3 : alignement en Flexbox
+   ========================================================= */
+.console-header {
+  display: flex;                    /* active le mode Flexbox */
+  justify-content: space-between;   /* pousse le 1er bloc à gauche, le 2e à droite */
+  align-items: center;              /* centre verticalement les 2 blocs */
+  gap: 24px;                        /* espace minimal entre les blocs */
+  flex-wrap: wrap;                  /* autorise le passage à la ligne si trop étroit */
+
+  padding: 20px 24px;               /* 20px haut/bas, 24px gauche/droite */
+  margin-bottom: 20px;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--crit);   /* liseré rouge en haut = état d'alerte */
+  border-radius: var(--radius);
+
+  /* Étape 2.1 — Box shadow : ombre portée + halo rouge (simulation d'alerte).
+     On peut empiler plusieurs ombres séparées par une virgule. */
+  box-shadow: 0 18px 40px -24px rgba(2,6,23,0.9),   /* ombre de profondeur */
+              0 0 34px -14px var(--crit-glow);       /* halo rouge diffus */
+}
+
+.brand { display: flex; align-items: center; gap: 14px; }  /* voyant + titre alignés */
+
+.status-led {
+  width: 12px; height: 12px; border-radius: 50%;   /* un carré 12x12 arrondi à 50% = cercle */
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgba(16,185,129,0.15), 0 0 12px var(--ok);  /* anneau + halo */
+  animation: pulse 2s ease-in-out infinite;         /* clignotement doux (voir @keyframes) */
+}
+
+.brand-text h1 {
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;   /* léger espacement des lettres */
+}
+.subtitle {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* Liste des indicateurs (KPI), alignés à droite du header. */
+.kpis {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  list-style: none;    /* retire les puces de la liste */
+  margin: 0; padding: 0;
+}
+.kpi { display: flex; flex-direction: column; gap: 2px; }  /* libellé au-dessus, valeur en dessous */
+.kpi-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;   /* tout en majuscules */
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+.kpi-value {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* Petit point coloré réutilisable (statut). */
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot-ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+/* =========================================================
+   MAIN — Étape 2.2 : macro-grille bidimensionnelle
+   ========================================================= */
+.dashboard {
+  display: grid;                          /* active le mode Grille */
+  grid-template-columns: 300px 1fr;       /* colonne 1 = 300px fixes, colonne 2 = tout le reste (1fr) */
+  gap: 20px;                              /* écart de 20px entre les colonnes */
+  align-items: start;                     /* les cartes s'alignent en haut (pas étirées) */
+}
+
+/* Style commun aux cartes (aside + section). */
+.card {
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  /* Étape 2.1 — Box shadow : ombre + halo bleu léger (alerte). */
+  box-shadow: 0 20px 44px -26px rgba(2,6,23,0.9),
+              0 0 30px -12px var(--info-glow);
+}
+
+/* Titre de carte (petit, en majuscules, souligné). */
+.card-title {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* ---------- Étape 1.2 — Formulaire de filtrage ---------- */
+.filter-form { display: flex; flex-direction: column; gap: 16px; } /* champs empilés verticalement */
+
+.field { display: flex; flex-direction: column; gap: 6px; }        /* libellé au-dessus de son champ */
+
+.field label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+/* Style commun à l'input texte ET au menu déroulant. */
+.field input[type="text"],
+.field select {
+  width: 100%;               /* occupe toute la largeur disponible */
+  padding: 10px 12px;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;             /* on retire le contour bleu par défaut... */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;  /* ...pour animer notre propre effet */
+}
+.field input[type="text"]::placeholder { color: var(--text-faint); }  /* couleur du texte d'exemple */
+
+/* Effet au clic dans le champ (focus) : bordure bleue + halo. */
+.field input[type="text"]:focus,
+.field select:focus {
+  border-color: var(--info);
+  box-shadow: 0 0 0 3px var(--info-glow);
+}
+
+/* Bouton "Appliquer les filtres". */
+.btn-submit {
+  margin-top: 4px;
+  padding: 11px 14px;
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #04121f;            /* texte sombre sur fond bleu clair */
+  background: linear-gradient(180deg, #56c6f7 0%, var(--info) 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;           /* curseur "main" au survol */
+  transition: transform 0.08s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn-submit:hover  { filter: brightness(1.08); box-shadow: 0 0 20px -4px var(--info-glow); } /* survol */
+.btn-submit:active { transform: translateY(1px); }                                            /* enfoncé */
+.btn-submit:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }            /* accessibilité clavier */
+
+/* ---------- Légende de criticité ---------- */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);   /* trait de séparation avec le formulaire */
+}
+.legend-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+.legend-item {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+/* TP05 — BADGES DE CRITICITÉ (spec n°2 : double codage).
+   Ils remplacent les anciennes pastilles .sev-dot, qui encodaient
+   l'information par la COULEUR SEULE. Chaque badge combine désormais
+   3 canaux redondants :
+     1) le TEXTE  ("Critique"...) — lisible par tous + lecteurs d'écran ;
+     2) la FORME  (▲ / ◆ / ●)     — différenciable sans aucune couleur ;
+     3) la COULEUR                — conservée comme renfort visuel rapide. */
+.sev-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.sev-icon { font-size: 0.6rem; line-height: 1; }   /* la forme, en léger retrait */
+
+.sev-badge-critique { color: var(--crit); background: rgba(239,68,68,0.10);  border-color: rgba(239,68,68,0.32); }
+.sev-badge-warning  { color: var(--warn); background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.32); }
+.sev-badge-info     { color: var(--info); background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.30); }
+
+/* Note d'accessibilité affichée sous la légende. */
+.legend-note {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+/* =========================================================
+   Étape 1.3 — Tableau des événements SIEM
+   ========================================================= */
+.events-head {
+  display: flex;
+  justify-content: space-between;   /* titre à gauche, badge "En direct" à droite */
+  align-items: center;
+  margin-bottom: 8px;
+}
+/* Dans l'en-tête de section, on annule le soulignement du titre. */
+.events-head .card-title { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+/* Badge "En direct" avec point rouge clignotant. */
+.live {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.78rem; font-weight: 500;
+  color: var(--crit);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--crit);
+  box-shadow: 0 0 8px var(--crit);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* Conteneur du tableau : coins arrondis + on cache ce qui déborde. */
+.table-wrap {
+  margin-top: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.events-table {
+  width: 100%;
+  border-collapse: collapse;   /* fusionne les bordures des cellules (pas de double trait) */
+  font-size: 0.88rem;
+}
+
+/* En-têtes de colonnes (<th>). */
+.events-table thead th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Cellules du corps (<td>). */
+.events-table tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  white-space: nowrap;   /* empêche le retour à la ligne dans une cellule (utile pour les IP) */
+}
+.events-table tbody tr:last-child td { border-bottom: none; }  /* pas de trait sous la dernière ligne */
+
+/* Chaque ligne a un liseré gauche transparent par défaut... */
+.events-table tbody tr {
+  transition: background 0.12s ease;
+  border-left: 3px solid transparent;
+}
+.events-table tbody tr:hover { background: rgba(56,189,248,0.05); }  /* surbrillance au survol */
+
+/* ...que l'on colore selon la criticité (le liseré ENCODE l'information). */
+.sev-row-critique { border-left-color: var(--crit); }
+.sev-row-warning  { border-left-color: var(--warn); }
+.sev-row-info     { border-left-color: var(--info); }
+
+/* Badges d'action pare-feu (pastilles arrondies colorées). */
+.action {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border-radius: 999px;   /* très grand rayon = forme "pilule" */
+  border: 1px solid transparent;
+}
+.action-blocked    { color: var(--ok);   background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.30); }
+.action-quarantine { color: var(--warn); background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.30); }
+.action-monitored  { color: var(--info); background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.30); }
+.action-allowed    { color: var(--text-dim); background: rgba(148,163,184,0.08); border-color: rgba(148,163,184,0.22); }
+
+/* =========================================================
+   FOOTER — statut de conformité SecOps
+   ========================================================= */
+.console-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 14px 22px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.foot-item { display: inline-flex; align-items: center; gap: 8px; }
+.foot-item strong { color: var(--ok); font-weight: 600; }
+.foot-sep { color: var(--text-faint); }
+
+/* ---------- Animation du voyant (clignotement) ----------
+   @keyframes définit les étapes de l'animation "pulse" :
+   pleine opacité -> à moitié transparent -> pleine opacité. */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+/* Accessibilité : si l'utilisateur a demandé "moins d'animations"
+   dans son système, on coupe le clignotement. */
+@media (prefers-reduced-motion: reduce) {
+  /* TP05 : le flash des lignes injectées (.row-new) est lui aussi coupé. */
+  .status-led, .live-dot, .row-new { animation: none; }
+}
+
+/* =========================================================
+   JOUR 3 — MISE EN PAGE ADAPTATIVE (Responsive Web Design)
+   Une media query = un bloc de règles qui ne s'applique QUE
+   si la condition (ici la largeur d'écran) est vraie.
+   C'est l'instruction conditionnelle qui manquait au duo Grid/Flexbox.
+   ========================================================= */
+
+/* ---------- TABLETTE : écran de 900px de large ou MOINS ----------
+   La grille 2 colonnes devient 1 seule colonne :
+   le panneau de filtres passe AU-DESSUS du tableau. */
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;   /* on annule la largeur fixe de 300px */
+  }
+
+  /* Le formulaire devient une barre de filtres horizontale (gain de place vertical). */
+  .filter-form {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;   /* aligne les champs par le bas */
+  }
+  .field { flex: 1 1 200px; }             /* chaque champ grandit, base 200px */
+  .btn-submit { flex: 0 0 auto; height: 40px; }  /* le bouton garde sa taille */
+
+  .legend {
+    flex-direction: row;   /* la légende passe aussi en ligne */
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* Filet de sécurité : si besoin, le tableau défile DANS sa carte,
+     jamais la page entière. */
+  .table-wrap { overflow-x: auto; }
+}
+
+/* ---------- MOBILE : écran de 560px de large ou MOINS ----------
+   Header empilé + tableau transformé en cartes (zéro scroll horizontal). */
+@media (max-width: 560px) {
+  body {
+    /* TP05 : marges réduites sur mobile, mais toujours protégées par les
+       zones de sécurité de l'appareil (même logique max/env qu'en base). */
+    padding: max(14px, env(safe-area-inset-top))
+             max(14px, env(safe-area-inset-right))
+             max(14px, env(safe-area-inset-bottom))
+             max(14px, env(safe-area-inset-left));
+  }
+
+  /* Header : identité au-dessus, indicateurs en dessous. */
+  .console-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .kpis { gap: 20px; flex-wrap: wrap; }
+
+  /* Le formulaire repasse en colonne PLEINE LARGEUR (plus lisible au doigt).
+     ATTENTION : on remet align-items à "stretch" pour annuler le "flex-end"
+     hérité du palier tablette (sinon les champs se collent à droite). */
+  .filter-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .field { flex: 1 1 auto; }
+  .btn-submit { width: 100%; }   /* bouton pleine largeur */
+
+  /* --- Transformation du tableau en cartes ---
+     On masque l'en-tête (thead) et on empile chaque cellule verticalement.
+     Le nom de la colonne est réinjecté via l'attribut data-label (voir plus bas). */
+  .events-table thead { display: none; }
+
+  /* On force les éléments de tableau à se comporter comme des blocs normaux. */
+  .events-table,
+  .events-table tbody,
+  .events-table tr,
+  .events-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* Chaque ligne devient une "carte". */
+  .events-table tbody tr {
+    margin-bottom: 12px;
+    padding: 4px 0;
+    border: 1px solid var(--border-soft);
+    border-left: 3px solid transparent;   /* liseré de criticité conservé */
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .events-table tbody tr:last-child { margin-bottom: 0; }
+
+  /* On rétablit la couleur du liseré. On répète le nom de classe DEUX fois
+     (tr.sev-row-XXX) pour augmenter la spécificité et écraser la règle
+     "border" ci-dessus, qui sinon remettrait le liseré en gris. */
+  .events-table tbody tr.sev-row-critique { border-left-color: var(--crit); }
+  .events-table tbody tr.sev-row-warning  { border-left-color: var(--warn); }
+  .events-table tbody tr.sev-row-info     { border-left-color: var(--info); }
+
+  /* Chaque cellule : nom de colonne à gauche, valeur à droite. */
+  .events-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 14px;
+    white-space: normal;   /* on ré-autorise le retour à la ligne */
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .events-table tbody tr td:last-child { border-bottom: none; }
+
+  /* ::before insère du contenu AVANT la cellule.
+     content: attr(data-label) récupère la valeur de l'attribut data-label
+     du <td> et l'affiche comme étiquette de colonne. */
+  .events-table tbody td::before {
+    content: attr(data-label);
+    color: var(--text-faint);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+/* ---------- Retour visuel du filtrage (créé par le JavaScript) ---------- */
+.filter-count {                 /* ligne "X / 7 événements" au-dessus du tableau */
+  margin: 16px 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+.filter-empty {                 /* message affiché quand aucun résultat ne correspond */
+  margin: 16px 0 0;
+  padding: 26px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);   /* bordure en pointillés */
+  border-radius: 10px;
+}
+
+
+/* =========================================================
+   TP05 — CONFORMITÉ WEBVIEW & ACCESSIBILITÉ SECOPS
+   ========================================================= */
+
+/* ---------- user-select: none (spec n°1) ----------
+   Dans une WebView, un appui long déclenche la sélection de texte et ses
+   poignées bleues : indispensable pour COPIER une IP, mais catastrophique
+   sur un BOUTON ou un titre (l'illusion d'application native se brise).
+   On désactive donc la sélection sur les éléments d'INTERFACE uniquement.
+   Le préfixe -webkit- reste requis par les WebView iOS (WKWebView). */
+.console-header,
+.card-title,
+.field label,
+.legend,
+.btn-submit,
+.btn-inject,
+.live,
+.events-table thead,
+.filter-count,
+.filter-empty,
+.console-footer {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ...MAIS les DONNÉES restent sélectionnables : le technicien d'astreinte
+   doit pouvoir copier une IP ou un ID d'événement pour investiguer.
+   Bloquer la sélection PARTOUT serait un contresens métier. */
+.events-table tbody td {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ---------- .sr-only : visible des lecteurs d'écran uniquement ----------
+   Pattern standard : l'élément reste DANS le DOM et donc dans l'arbre
+   d'accessibilité, mais il est réduit à 1px et rogné → invisible à l'écran.
+   (display:none ou visibility:hidden le cacherait AUSSI aux lecteurs
+   d'écran : la région live ne serait alors jamais annoncée.) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- En-tête du tableau : bouton de démo + badge "En direct" ---- */
+.events-actions { display: inline-flex; align-items: center; gap: 14px; }
+
+.btn-inject {
+  padding: 6px 12px;
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.btn-inject:hover        { color: var(--text); border-color: var(--info); }
+.btn-inject:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+/* ---------- Flash discret sur la ligne injectée ----------
+   Le pendant VISUEL de l'annonce vocale role="alert" : l'œil est guidé
+   vers le nouvel événement. (Coupé par prefers-reduced-motion plus haut.) */
+@keyframes row-in {
+  from { background: rgba(239, 68, 68, 0.16); }
+  to   { background: transparent; }
+}
+.row-new { animation: row-in 1.8s ease-out; }

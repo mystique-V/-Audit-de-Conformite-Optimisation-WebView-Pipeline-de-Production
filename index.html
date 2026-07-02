@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<!-- DOCTYPE html : indique au navigateur qu'on utilise la norme HTML5 (mode standard). -->
+
+<html lang="fr">
+<!-- lang="fr" : la langue du document est le français (utile pour l'accessibilité,
+     les lecteurs d'écran et la correction orthographique). -->
+
+<head>
+  <!-- <head> : la "carte d'identité" de la page. Rien ici n'est visible à l'écran ;
+       on y met les métadonnées, le titre, les polices et les feuilles de style. -->
+
+  <meta charset="UTF-8">
+  <!-- charset UTF-8 : jeu de caractères universel. Sans lui, les accents (é, è, à)
+       et les emojis risquent de s'afficher en symboles bizarres. -->
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- viewport : balise INDISPENSABLE au responsive. Elle dit au téléphone
+       "utilise la vraie largeur de l'écran" au lieu de simuler un écran de bureau.
+       Sans elle, les media queries CSS ne se déclencheraient pas correctement.
+       TP05 : viewport-fit=cover autorise la page à s'étendre SOUS l'encoche
+       (notch) et la barre de statut. Les zones sûres sont ensuite gérées en
+       CSS via env(safe-area-inset-*) — sans "cover", ces variables valent 0.
+       NB : on n'ajoute PAS user-scalable=no. Le zoom par pincement reste un
+       droit d'accessibilité (WCAG 1.4.4) ; le "zoom parasite" du double-tap
+       est, lui, neutralisé côté CSS par touch-action: manipulation. -->
+
+  <title>SOC Security Events — Console SIEM</title>
+  <!-- <title> : texte affiché dans l'onglet du navigateur. -->
+
+  <!-- TP05 : theme-color teinte la barre de statut du navigateur Android et
+       de la WebView aux couleurs de la console — comportement "app native". -->
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- TP05 : description exploitée par l'audit SEO de Lighthouse et par les
+       moteurs de recherche (extrait affiché sous le titre du résultat). -->
+  <meta name="description" content="Console SIEM de supervision SOC : journal des événements de sécurité en temps réel, filtrage par IP source et niveau de criticité.">
+
+  <!-- === Chargement des polices Google Fonts === -->
+  <!-- preconnect : ouvre la connexion aux serveurs de polices en avance = chargement plus rapide. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- On importe 2 familles : IBM Plex Sans (interface) et JetBrains Mono (données/logs). -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Lien vers NOTRE feuille de style externe (séparation HTML / CSS). -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <!-- <body> : tout ce qui est VISIBLE à l'écran se trouve ici. -->
+
+  <!-- =========================================================
+       HEADER — identité de la console (Étape 1.1)
+       Mise en page en Flexbox (Étape 2.3) :
+       titre à gauche, indicateurs de performance à droite.
+  ========================================================== -->
+  <header class="console-header">
+
+    <!-- Bloc de gauche : voyant d'état + titre -->
+    <div class="brand">
+      <!-- Petit rond vert qui "pulse" (voyant système OK). aria-hidden : décoratif,
+           donc ignoré par les lecteurs d'écran. -->
+      <span class="status-led" aria-hidden="true"></span>
+
+      <div class="brand-text">
+        <h1>SOC Security Events</h1>              <!-- Titre principal (1 seul <h1> par page). -->
+        <p class="subtitle">Console de supervision temps réel · SIEM</p>
+      </div>
+    </div>
+
+    <!-- Bloc de droite : liste des indicateurs (KPI). Une <ul> car c'est une liste. -->
+    <ul class="kpis">
+      <li class="kpi">
+        <span class="kpi-label">EPS</span>                 <!-- Événements par seconde. -->
+        <span class="kpi-value mono">1&nbsp;284</span>     <!-- &nbsp; = espace insécable (le nombre ne se coupe pas). -->
+      </li>
+      <li class="kpi">
+        <span class="kpi-label">Base SIEM</span>
+        <span class="kpi-value"><span class="dot dot-ok"></span>Opérationnelle</span>
+      </li>
+      <li class="kpi">
+        <span class="kpi-label">Menaces actives</span>
+        <span class="kpi-value mono crit">07</span>        <!-- classe "crit" = texte rouge. -->
+      </li>
+    </ul>
+  </header>
+
+  <!-- =========================================================
+       MAIN — zone principale en grille (Étape 2.2)
+       2 colonnes : aside (300px) + section (1fr), écart de 20px.
+  ========================================================== -->
+  <main class="dashboard">
+
+    <!-- ===== Colonne 1 : panneau latéral de filtres (Étape 1.2) ===== -->
+    <aside class="card filters">
+      <h2 class="card-title">Filtres</h2>
+
+      <!-- action="#" : où envoyer le formulaire (ici nulle part, le JS gère tout).
+           method="get" : méthode d'envoi (get = les données passent dans l'URL). -->
+      <form class="filter-form" action="#" method="get">
+
+        <!-- Champ texte pour filtrer par IP source. -->
+        <div class="field">
+          <!-- label + for="ip" relié à l'input id="ip" : cliquer le libellé active le champ. -->
+          <label for="ip">Adresse IP source</label>
+          <input type="text" id="ip" name="ip" placeholder="ex : 185.220.101.5" autocomplete="off">
+          <!-- placeholder : texte grisé d'exemple. autocomplete="off" : pas de suggestions. -->
+        </div>
+
+        <!-- Menu déroulant pour le niveau de criticité. -->
+        <div class="field">
+          <label for="severity">Niveau de criticité</label>
+          <select id="severity" name="severity">
+            <!-- value : la valeur envoyée/lue par le JS (différente du texte affiché). -->
+            <option value="all">Tous les niveaux</option>
+            <option value="critique">Critique</option>
+            <option value="warning">Warning</option>
+            <option value="info">Info</option>
+          </select>
+        </div>
+
+        <!-- Bouton d'envoi : c'est lui qui déclenche le filtrage (via le JS). -->
+        <input type="submit" class="btn-submit" value="Appliquer les filtres">
+      </form>
+
+      <!-- TP05 : légende passée en DOUBLE CODAGE (spec n°2).
+           Avant : une pastille de couleur SEULE portait l'information —
+           indéchiffrable pour ~8% des hommes (daltonisme). Après : les mêmes
+           badges que le tableau, combinant texte explicite + forme distincte
+           (▲ triangle / ◆ losange / ● rond) + couleur en simple renfort. -->
+      <div class="legend">
+        <span class="legend-title">Légende</span>
+        <span class="legend-item"><span class="sev-badge sev-badge-critique"><span class="sev-icon" aria-hidden="true">▲</span>Critique</span></span>
+        <span class="legend-item"><span class="sev-badge sev-badge-warning"><span class="sev-icon" aria-hidden="true">◆</span>Warning</span></span>
+        <span class="legend-item"><span class="sev-badge sev-badge-info"><span class="sev-icon" aria-hidden="true">●</span>Info</span></span>
+        <p class="legend-note">Chaque statut combine texte, forme et couleur : lisible même sans perception des couleurs.</p>
+      </div>
+    </aside>
+
+    <!-- ===== Colonne 2 : tableau des événements SIEM (Étape 1.3) ===== -->
+    <section class="card events">
+
+      <!-- En-tête de la section : titre + badge "En direct". -->
+      <div class="events-head">
+        <h2 class="card-title">Journal des événements</h2>
+        <div class="events-actions">
+          <!-- TP05 : bouton de DÉMONSTRATION — il injecte un événement dans
+               le tableau pour prouver le fonctionnement de la région live
+               ARIA (annonce vocale). En production, c'est le collecteur SIEM
+               qui injecterait ; ce bouton se retire alors simplement. -->
+          <button type="button" class="btn-inject" id="inject-btn">+ Simuler un événement</button>
+          <span class="live"><span class="live-dot"></span>En direct</span>
+        </div>
+      </div>
+
+      <!-- TP05 : RÉGION LIVE ARIA (spec n°2).
+           role="alert" équivaut à aria-live="assertive" : dès que le JS écrit
+           du texte ici, le lecteur d'écran INTERROMPT sa lecture en cours
+           pour l'annoncer — le comportement voulu pour un événement CRITIQUE.
+           La région existe dès le chargement (les lecteurs d'écran détectent
+           mal les régions live créées après coup) et la classe .sr-only la
+           rend invisible à l'écran tout en la laissant dans l'arbre
+           d'accessibilité. -->
+      <p id="sr-alert" class="sr-only" role="alert"></p>
+
+      <!-- Conteneur du tableau : permet de gérer le débordement sur petit écran. -->
+      <div class="table-wrap">
+        <table class="events-table">
+
+          <!-- <thead> : la ligne d'en-têtes de colonnes. -->
+          <thead>
+            <!-- TP05 : scope="col" précise aux lecteurs d'écran que chaque
+                 en-tête s'applique à sa COLONNE — en navigant de cellule en
+                 cellule, le SR annonce "IP Source : 185.220.101.5". -->
+            <tr>
+              <th scope="col">Criticité</th>
+              <th scope="col">Horodatage</th>
+              <th scope="col">ID Événement</th>
+              <th scope="col">IP Source</th>
+              <th scope="col">Type d'attaque</th>
+              <th scope="col">Action pare-feu</th>
+            </tr>
+          </thead>
+
+          <!-- <tbody> : le corps du tableau, une <tr> = un événement.
+               La classe sev-row-XXX encode la criticité (couleur du liseré gauche).
+               L'attribut data-label sur chaque <td> sert 2 buts :
+                 1) réafficher le nom de colonne en mode "carte" sur mobile ;
+                 2) permettre au JS de repérer la bonne cellule (ex. IP Source).
+               TP05 : chaque ligne gagne une 1re cellule "Criticité" en DOUBLE
+               CODAGE (texte + forme + couleur). Le liseré coloré seul ne
+               suffisait pas : un ingénieur daltonien ne peut pas distinguer
+               de façon fiable le rouge de l'orange (spec n°2). -->
+          <tbody>
+            <tr class="sev-row-critique">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-critique"><span class="sev-icon" aria-hidden="true">▲</span>Critique</span></td>
+              <td class="mono" data-label="Horodatage">06:12:04</td>
+              <td class="mono" data-label="ID Événement">EVT-942</td>
+              <td class="mono" data-label="IP Source">185.220.101.5</td>
+              <td data-label="Type d'attaque">Brute Force SSH</td>
+              <td data-label="Action pare-feu"><span class="action action-blocked">Bloqué</span></td>
+            </tr>
+            <tr class="sev-row-warning">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-warning"><span class="sev-icon" aria-hidden="true">◆</span>Warning</span></td>
+              <td class="mono" data-label="Horodatage">06:12:47</td>
+              <td class="mono" data-label="ID Événement">EVT-945</td>
+              <td class="mono" data-label="IP Source">45.155.205.233</td>
+              <td data-label="Type d'attaque">Scan de ports (SYN)</td>
+              <td data-label="Action pare-feu"><span class="action action-blocked">Rejeté</span></td>
+            </tr>
+            <tr class="sev-row-critique">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-critique"><span class="sev-icon" aria-hidden="true">▲</span>Critique</span></td>
+              <td class="mono" data-label="Horodatage">06:13:19</td>
+              <td class="mono" data-label="ID Événement">EVT-951</td>
+              <td class="mono" data-label="IP Source">103.97.176.42</td>
+              <td data-label="Type d'attaque">Injection SQL</td>
+              <td data-label="Action pare-feu"><span class="action action-blocked">Bloqué</span></td>
+            </tr>
+            <tr class="sev-row-warning">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-warning"><span class="sev-icon" aria-hidden="true">◆</span>Warning</span></td>
+              <td class="mono" data-label="Horodatage">06:13:58</td>
+              <td class="mono" data-label="ID Événement">EVT-956</td>
+              <td class="mono" data-label="IP Source">89.248.165.74</td>
+              <td data-label="Type d'attaque">Tentative RDP</td>
+              <td data-label="Action pare-feu"><span class="action action-monitored">Surveillé</span></td>
+            </tr>
+            <tr class="sev-row-critique">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-critique"><span class="sev-icon" aria-hidden="true">▲</span>Critique</span></td>
+              <td class="mono" data-label="Horodatage">06:14:22</td>
+              <td class="mono" data-label="ID Événement">EVT-960</td>
+              <td class="mono" data-label="IP Source">141.98.11.89</td>
+              <td data-label="Type d'attaque">Balise C2 (Cobalt Strike)</td>
+              <td data-label="Action pare-feu"><span class="action action-quarantine">Quarantaine</span></td>
+            </tr>
+            <tr class="sev-row-info">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-info"><span class="sev-icon" aria-hidden="true">●</span>Info</span></td>
+              <td class="mono" data-label="Horodatage">06:14:51</td>
+              <td class="mono" data-label="ID Événement">EVT-963</td>
+              <td class="mono" data-label="IP Source">193.201.9.14</td>
+              <td data-label="Type d'attaque">Requête DNS anormale</td>
+              <td data-label="Action pare-feu"><span class="action action-allowed">Autorisé</span></td>
+            </tr>
+            <tr class="sev-row-critique">
+              <td data-label="Criticité"><span class="sev-badge sev-badge-critique"><span class="sev-icon" aria-hidden="true">▲</span>Critique</span></td>
+              <td class="mono" data-label="Horodatage">06:15:07</td>
+              <td class="mono" data-label="ID Événement">EVT-967</td>
+              <td class="mono" data-label="IP Source">5.188.206.18</td>
+              <td data-label="Type d'attaque">Exfiltration de données</td>
+              <td data-label="Action pare-feu"><span class="action action-blocked">Bloqué</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       FOOTER — statut de conformité SecOps (Étape 1.1)
+  ========================================================== -->
+  <footer class="console-footer">
+    <span class="foot-item"><span class="dot dot-ok"></span>Conformité SecOps : <strong>Nominale</strong></span>
+    <span class="foot-sep">·</span>
+    <span class="foot-item">ISO/IEC 27001 · Journalisation active</span>
+    <span class="foot-sep">·</span>
+    <span class="foot-item mono">Dernière synchro 06:15:11 UTC</span>
+  </footer>
+
+  <!-- Script placé à la FIN du body : ainsi tout le HTML existe déjà quand le JS
+       s'exécute (sinon il ne trouverait pas les éléments à manipuler). -->
+  <script src="script.js"></script>
+</body>
+</html>
